@@ -1,8 +1,12 @@
+
+
 #### Specify all the paths here #####
-test_imgs ='/data/scratch/acw676/AMAMYA/imgs/'   ## full-scale images 
-test_masks ='/data/scratch/acw676/AMAMYA/masks/'  ## full-scale ground truths 
-path_to_checkpoints = "/data/scratch/acw676/AMAMYA/UNet_512_1.pth.tar"
-path_to_save_visual_results='/data/scratch/acw676/AMAMYA/results/'
+
+#### Specify all the paths here #####
+test_imgs ='/data/scratch/wpw030/IHC_segmentation/Test/img/'   ## full-scale images 
+test_masks ='/data/scratch/wpw030/IHC_segmentation/Test/GT/'  ## full-scale ground truths 
+path_to_checkpoints = "/data/scratch/wpw030/IHC_segmentation/weights/UNet_512_1.pth.tar"
+path_to_save_visual_results='/data/scratch/wpw030/IHC_segmentation/results_unet/'
 
 
 import os
@@ -14,14 +18,13 @@ from empatches import EMPatches
 emp = EMPatches()
 import torch    
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-import albumentations as A
+#import albumentations as A
 import segmentation_models_pytorch as smp
 from tqdm import tqdm
 import torch.optim as optim
 import matplotlib.pyplot as plt
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-import PIL.Image as Image
-import PIL
+
 
 import torch    
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -127,7 +130,7 @@ def blend(image1,gt,pre, ratio=0.5):
 test_transform1 = transforms.Compose([
         # transforms.Resize((224, 224)),                            
         # transforms.ToTensor(),
-        transforms.Normalize((0.8946, 0.8659, 0.8638), (0.8946, 0.8659, 0.8638))      
+        transforms.Normalize((0.8946, 0.8659, 0.8638), (0.1050, 0.1188, 0.1180))      
     ])
 
 
@@ -146,25 +149,22 @@ def check_dice_score(test_loader, model, device=DEVICE):
             pred1=[]
             for i in range(img_patches.shape[0]):
 				
-              single_img = img_patches[i,:,:,:]
-              
-              single_img = test_transform1(single_img)
-              
-              single_img=torch.unsqueeze(single_img, axis=0)
-              p1=model(single_img)
-                            
-              p1 = (p1 > 0.5) * 1
-              
-              p1=p1.cuda().cpu()
-              p1 = np.stack((p1,)*3, axis=-1)
-              pred1.append(p1)
-			  
-			  del p1
-			  gc.collect()
+                single_img = img_patches[i,:,:,:]
+                
+                single_img = test_transform1(single_img)
+                
+                single_img=torch.unsqueeze(single_img, axis=0)
+                p1=model(single_img)
+                              
+                p1 = (p1 > 0.5) * 1
+                
+                p1=p1.cuda().cpu()
+                p1 = np.stack((p1,)*3, axis=-1)
+                pred1.append(p1)
 
             merged_pre = emp.merge_patches(pred1, mask_indices)
                     
-            t1_cpu = t1.to('cpu)    
+            t1_cpu = t1.to('cpu')    
             t1_cpu= t1_cpu[0,:,:,:].numpy()
             
             dice_score = (2 * (merged_pre * t1_cpu).sum()) / (

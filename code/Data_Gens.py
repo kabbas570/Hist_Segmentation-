@@ -109,18 +109,18 @@ def Data_Loader_Val( image_dir,mask_dir, test_transform, batch_size, num_workers
     return data_loader
 
 
-train_imgs = r'C:\My_Data\Amaya\Train\img'
-train_masks = r'C:\My_Data\Amaya\Train\GT'
-
-val_loader = Data_Loader_Val(train_imgs, train_masks, test_transform, batch_size = 2)
-train_loader = Data_Loader_Train(train_imgs, train_masks, train_transform, batch_size = 2)
-
-a = iter(train_loader)
-a1 =next(a)
-img = a1[0][0,:].numpy()
-img = img.transpose(2,1,0)
-gt = a1[1][0,0,:].numpy()
-plt.figure()
-plt.imshow(img)
-plt.figure()
-plt.imshow(gt)
+#train_imgs = r'C:\My_Data\Amaya\Train\img'
+#train_masks = r'C:\My_Data\Amaya\Train\GT'
+#
+#val_loader = Data_Loader_Val(train_imgs, train_masks, test_transform, batch_size = 2)
+#train_loader = Data_Loader_Train(train_imgs, train_masks, train_transform, batch_size = 2)
+#
+#a = iter(train_loader)
+#a1 =next(a)
+#img = a1[0][0,:].numpy()
+#img = img.transpose(2,1,0)
+#gt = a1[1][0,0,:].numpy()
+#plt.figure()
+#plt.imshow(img)
+#plt.figure()
+#plt.imshow(gt

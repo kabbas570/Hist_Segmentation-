@@ -1,15 +1,14 @@
-    
-   #### Specify all the paths here #####
+ #### Specify all the paths here #####
    
-train_imgs ='/data/scratch/acw676/Hist/val/img/'
-train_masks ='/data/scratch/acw676/Hist/Val/GT/'
+train_imgs ='/data/scratch/wpw030/IHC_segmentation/Train/img/'
+train_masks ='/data/scratch/wpw030/IHC_segmentation/Train/GT/'
 
-val_imgs='/data/scratch/acw676/Hist/Val/img/'
-val_masks='/data/scratch/acw676/Hist/Val/GT/'
+val_imgs='/data/scratch/wpw030/IHC_segmentation/Val/img/'
+val_masks='/data/scratch/wpw030/IHC_segmentation/Val/GT/'
 
 
-path_to_save_check_points='/data/scratch/acw676/Hist/weights/'+'/UNet_512_1'
-path_to_save_Learning_Curve='/data/scratch/acw676/Hist/weights/'+'/UNet_512_1'
+path_to_save_check_points='/data/scratch/wpw030/IHC_segmentation/weights/'+'/UNet_512_1'
+path_to_save_Learning_Curve='/data/scratch/wpw030/IHC_segmentation/weights/'+'/UNet_512_1'
 
 
         #### Specify all the Hyperparameters\image dimenssions here #####
@@ -26,10 +25,10 @@ import os
 from torch.utils.data import Dataset
 import numpy as np
 from torch.utils.data import DataLoader
-import albumentations as A
 import cv2
 import segmentation_models_pytorch as smp
 from tqdm import tqdm
+from torchvision import transforms
 import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
@@ -37,10 +36,31 @@ import matplotlib.pyplot as plt
             ### Data_Generators ########
             #### The first one will agument and Normalize data and used for training ###
             #### The second will not apply Data augmentaations and only prcocess the data during validation ###
-from Data_Gens import Data_Loader_Train,Data_Loader_Val
 
-train_loader = Data_Loader_Val(train_imgs,train_masks,batch_size = batch_size)
-val_loader = Data_Loader_Train(val_imgs,val_masks,batch_size = batch_size)
+
+
+train_transform = transforms.Compose([
+        transforms.Resize((224, 224)),                            
+        #transforms.ColorJitter(brightness=0.005, contrast=0.005, saturation=0.005, hue=0.005),
+        transforms.RandomChoice([
+        transforms.ColorJitter(brightness=0.1),
+        transforms.ColorJitter(contrast=0.1), 
+        transforms.ColorJitter(saturation=0.1),
+        transforms.ColorJitter(hue=0.1)]),
+        #transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.8946, 0.8659, 0.8638), (0.1050, 0.1188, 0.1180))      
+    ])
+
+test_transform = transforms.Compose([
+        transforms.Resize((224, 224)),                            
+        transforms.ToTensor(),
+        transforms.Normalize((0.8946, 0.8659, 0.8638), (0.1050, 0.1188, 0.1180))      
+    ])
+    
+from Data_Gens import Data_Loader_Train,Data_Loader_Val
+train_loader = Data_Loader_Val(train_imgs,train_masks,train_transform, batch_size = batch_size)
+val_loader = Data_Loader_Train(val_imgs,val_masks,test_transform, batch_size = batch_size)
 
 print(len(train_loader)) ### this shoud be = Total_images/ batch size
 print(len(val_loader))   ### same here
@@ -49,7 +69,7 @@ print(len(val_loader))   ### same here
 #### This part  models ####
 
 
-from models import UNet_512
+from Models import UNet_512
 
 ### Specify all the Losses (Train+ Validation), and Validation Dice score to plot on learing-curve
 avg_train_losses = []   # losses of all training epochs

@@ -1,11 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
 
 class DoubleConv(nn.Module):
-    """(convolution => [BN] => GELU) * 2"""
+    """(convolution => [BN] => ReLU) * 2"""
 
     def __init__(self, in_channels, out_channels, mid_channels=None):
         super().__init__()
@@ -14,11 +12,11 @@ class DoubleConv(nn.Module):
         self.double_conv = nn.Sequential(
             nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(mid_channels),
-            nn.GELU(),
+            nn.ReLU(),
             
             nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
-            nn.GELU(),
+            nn.ReLU(),
         )
 
     def forward(self, x):
@@ -55,15 +53,12 @@ class Up(nn.Module):
         x1 = self.up(x1)
         # input is CHW
         diffY = x2.size()[2] - x1.size()[2]
-        diffX = x2.size()[3] - x1.size()[3] 
+        diffX = x2.size()[3] - x1.size()[3]
 
         x1 = F.pad(x1, [diffX // 2, diffX - diffX // 2,
                         diffY // 2, diffY - diffY // 2])
-        
-        x_ = x1 + x2
-        x_ = torch.cat([x_,torch.zeros(x1.shape).to(device=DEVICE)],axis=1)
         x = torch.cat([x2, x1], dim=1)
-        x = x + x_
+        
         return self.conv(x)
     
 class OutConv(nn.Module):
@@ -94,7 +89,7 @@ class UNet_512(nn.Module):
         self.up3 = Up(128, 64 // factor, bilinear)
         self.up4 = Up(64, 32, bilinear)
         self.outc = OutConv(32,1)
-        self.act = torch.nn.Sigmoid()
+        self.activation = torch.nn.Sigmoid()
                                         
     def forward(self, x):
 
@@ -112,14 +107,65 @@ class UNet_512(nn.Module):
         z5 = self.up4(z4, x1)
         logits1 = self.outc(z5)
          
-        return self.act(logits1)
-        
+        return self.activation(logits1) 
 
 
 # Input_Image_Channels = 3
 # def model() -> UNet_512:
 #     model = UNet_512()
 #     return model
+# DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+# from torchsummary import summary
+# model = model()
+# model.to(device=DEVICE,dtype=torch.float)
+# summary(model, [(Input_Image_Channels, 256,256)])
+
+
+class UNet_1024(nn.Module):
+    def __init__(self, n_channels = 3, bilinear=False):
+        super(UNet_1024, self).__init__()
+        self.n_channels = n_channels
+        self.bilinear = bilinear
+
+        self.inc = DoubleConv(n_channels, 32)
+        self.down1 = Down(32, 64)
+        self.down2 = Down(64, 128)
+        self.down3 = Down(128, 256)
+        self.down4 = Down(256, 512)
+        factor = 2 if bilinear else 1
+        self.down5 = Down(512, 1024 // factor)
+        
+        self.up0 = Up(1024, 512 // factor, bilinear)
+        self.up1 = Up(512, 256 // factor, bilinear)
+        self.up2 = Up(256, 128 // factor, bilinear)
+        self.up3 = Up(128, 64 // factor, bilinear)
+        self.up4 = Up(64, 32, bilinear)
+        self.outc = OutConv(32,1)
+        self.activation = torch.nn.Sigmoid()
+                                        
+    def forward(self, x):
+
+        x1 = self.inc(x)
+        x2 = self.down1(x1)
+        x3 = self.down2(x2)
+        x4 = self.down3(x3)
+        x5 = self.down4(x4)
+        x6 = self.down5(x5)
+        
+        z1 = self.up0(x6, x5)
+        z2 = self.up1(z1, x4)
+        z3 = self.up2(z2, x3)
+        z4 = self.up3(z3, x2)
+        z5 = self.up4(z4, x1)
+        logits1 = self.outc(z5)
+         
+        return self.activation(logits1) 
+    
+# Input_Image_Channels = 3
+# def model() -> UNet_1024:
+#     model = UNet_1024()
+#     return model
+# DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # from torchsummary import summary
 # model = model()
 # model.to(device=DEVICE,dtype=torch.float)
